@@ -13,6 +13,8 @@ const todos = [{
     text: 'Second test todo'
 }];
 
+var falseId = new ObjectID();
+
 beforeEach((done) => {
     Todo.remove({}).then(() => {
         return Todo.insertMany(todos);
@@ -92,9 +94,43 @@ describe('GET /todos/:id', () => {
     });
 
     it('should return 404 because todo not found', (done) => {
-        var falseId = new ObjectID;
         request(app)
             .get(`/todos/${falseId.toHexString()}`)
+            .expect(404)
+            .end(done);
+    });
+});
+
+describe('DELETE /todos/:id', () => {
+    it('should delete a todo', (done) => {
+        var id = todos[0]._id.toHexString()
+        request(app)
+            .delete(`/todos/${id}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.text).toBe(todos[0].text);
+            })
+            .end((err, res) => {
+                if (err) {
+                    return done(err);
+                }
+                Todo.findById(id).then((todo) => {
+                    expect(todo).toNotExist();
+                    done();
+                }).catch((e) => done(e));
+            });
+    });
+
+    it('should return 404 if todo does not exist', (done) => {
+        request(app)
+            .delete(`/todos/${falseId.toHexString()}`)
+            .expect(404)
+            .end(done);
+    });
+
+    it('should return 404 if invalid ID', (done) => {
+        request(app)
+            .delete('/todos/123')
             .expect(404)
             .end(done);
     });
